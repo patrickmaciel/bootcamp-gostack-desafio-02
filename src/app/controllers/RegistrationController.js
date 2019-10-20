@@ -1,8 +1,13 @@
 import * as Yup from 'yup';
 import { parseISO, isBefore, addMonths } from 'date-fns';
+import { Op } from 'sequelize';
+
 import Registration from '../models/Registration';
 import Plan from '../models/Plan';
 import Student from '../models/Student';
+
+import Queue from '../../lib/Queue';
+import RegistrationNewMail from '../jobs/RegistrationNewMail';
 
 class RegistrationController {
   async index(req, res) {
@@ -42,6 +47,21 @@ class RegistrationController {
 
     const { student_id, plan_id, start_date } = req.body;
 
+    const existRegistration = await Registration.findOne({
+      where: {
+        student_id,
+        plan_id,
+        end_date: {
+          [Op.gte]: new Date(),
+        },
+      },
+    });
+    if (existRegistration) {
+      return res
+        .status(400)
+        .json({ error: 'This student already has this plan active' });
+    }
+
     const student = await Student.findByPk(student_id);
     if (!student) {
       return res.status(400).json({ error: 'Invalid student' });
@@ -63,6 +83,12 @@ class RegistrationController {
       price,
     });
 
+    await Queue.add(RegistrationNewMail.key, {
+      student,
+      plan,
+      registration,
+    });
+
     return res.json(registration);
   }
 
@@ -72,20 +98,36 @@ class RegistrationController {
     }
 
     const schema = Yup.object().shape({
-      title: Yup.string(),
-      duration: Yup.number(),
-      price: Yup.number(),
+      student_id: Yup.number(),
+      plan_id: Yup.number(),
+      start_date: Yup.date(),
     });
     if (!(await schema.isValid(req.body))) {
       return res.status(400).json({ error: 'Validation fails' });
     }
 
-    const registration = await Registration.findByPk(req.params.id);
-    if (!registration) {
-      return res.status(400).json({ error: 'Invalid id' });
+    const { student_id, plan_id, start_date } = req.body;
+
+    const student = await Student.findByPk(student_id);
+    if (!student) {
+      return res.status(400).json({ error: 'Invalid student' });
     }
 
-    await registration.update(req.body);
+    const plan = await Plan.findByPk(plan_id);
+    if (!plan) {
+      return res.status(400).json({ error: 'Invalid plan' });
+    }
+
+    const end_date = addMonths(parseISO(start_date), plan.duration);
+    const price = plan.duration * plan.price;
+
+    const registration = await Registration.create({
+      student_id,
+      plan_id,
+      start_date,
+      end_date,
+      price,
+    });
 
     return res.json(registration);
   }
