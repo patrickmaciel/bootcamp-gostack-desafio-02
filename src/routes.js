@@ -5,10 +5,13 @@ import StudentController from './app/controllers/StudentController';
 import UserController from './app/controllers/UserController';
 
 import authMiddleware from './app/middlewares/auth';
+import PlanController from './app/controllers/PlanController';
 
 const routes = new Router();
 
 routes.post('/login', SessionController.login);
+
+routes.get('/plans', PlanController.index);
 
 routes.use(authMiddleware);
 
