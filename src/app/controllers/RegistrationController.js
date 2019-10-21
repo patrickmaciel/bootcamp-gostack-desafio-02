@@ -172,7 +172,7 @@ class RegistrationController {
     }
 
     await registration.destroy();
-    return res.json({ message: `Registration ${registration.title} deleted!` });
+    return res.json({ message: `Registration deleted!` });
   }
 }
 
