@@ -8,6 +8,7 @@ import Student from '../models/Student';
 
 import Queue from '../../lib/Queue';
 import RegistrationNewMail from '../jobs/RegistrationNewMail';
+import RegistrationUpdateMail from '../jobs/RegistrationUpdateMail';
 
 class RegistrationController {
   async index(req, res) {
@@ -97,6 +98,12 @@ class RegistrationController {
       return res.status(400).json({ error: 'Invalid registration' });
     }
 
+    const registration = await Registration.findByPk(req.params.id);
+    if (!registration) {
+      return res.status(400).json({ error: 'Invalid request' });
+    }
+    const oldPlanId = registration.plan_id;
+
     const schema = Yup.object().shape({
       student_id: Yup.number(),
       plan_id: Yup.number(),
@@ -107,6 +114,21 @@ class RegistrationController {
     }
 
     const { student_id, plan_id, start_date } = req.body;
+
+    const existRegistration = await Registration.findOne({
+      where: {
+        student_id,
+        plan_id,
+        end_date: {
+          [Op.gte]: new Date(),
+        },
+      },
+    });
+    if (existRegistration) {
+      return res
+        .status(400)
+        .json({ error: 'This student already has this plan active' });
+    }
 
     const student = await Student.findByPk(student_id);
     if (!student) {
@@ -121,13 +143,20 @@ class RegistrationController {
     const end_date = addMonths(parseISO(start_date), plan.duration);
     const price = plan.duration * plan.price;
 
-    const registration = await Registration.create({
-      student_id,
+    await registration.update({
       plan_id,
       start_date,
       end_date,
       price,
     });
+
+    if (oldPlanId !== plan_id) {
+      await Queue.add(RegistrationUpdateMail.key, {
+        student,
+        plan,
+        registration,
+      });
+    }
 
     return res.json(registration);
   }
