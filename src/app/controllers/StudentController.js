@@ -2,6 +2,7 @@ import * as Yup from 'yup';
 import { Op } from 'sequelize';
 
 import Student from '../models/Student';
+import HelpOrder from '../models/HelpOrder';
 
 class StudentController {
   async store(req, res) {
@@ -91,6 +92,20 @@ class StudentController {
       weight,
       height,
     });
+  }
+
+  async helpOrders(req, res) {
+    if (!req.params.id) {
+      return res.status(400).json({ error: 'Invalid request' });
+    }
+
+    const helpOrders = await HelpOrder.findAll({
+      where: {
+        student_id: req.params.id,
+      },
+    });
+
+    return res.json(helpOrders);
   }
 }
 
