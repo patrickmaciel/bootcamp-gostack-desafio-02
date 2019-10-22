@@ -1,5 +1,5 @@
 import Sequelize, { Model } from 'sequelize';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import pt from 'date-fns/locale/pt';
 
 class Checkin extends Model {

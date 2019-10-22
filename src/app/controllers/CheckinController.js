@@ -16,7 +16,7 @@ class CheckinController {
       where: {
         student_id: req.params.id,
       },
-      attributes: ['id', 'date', 'created_at'],
+      attributes: ['id', 'date', 'createdAt'],
       include: [
         {
           model: Student,
