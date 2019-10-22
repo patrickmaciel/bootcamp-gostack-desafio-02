@@ -40,6 +40,6 @@ routes.put('/registrations/:id', RegistrationController.update);
 routes.delete('/registrations/:id', RegistrationController.delete);
 
 routes.get('/help-orders', HelpOrderController.index);
-routes.put('/help-orders/:id', HelpOrderController.update);
+routes.put('/help-orders/:id/answer', HelpOrderController.update);
 
 export default routes;
